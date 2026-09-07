@@ -9,8 +9,18 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // MySQL uses org_projects_user_id_unique as the index for the users
+        // foreign key, so DROP INDEX fails until the FK is removed.
+        Schema::table('org_projects', function (Blueprint $table) {
+            $table->dropForeign(['user_id']);
+        });
+
         Schema::table('org_projects', function (Blueprint $table) {
             $table->dropUnique('org_projects_user_id_unique');
+        });
+
+        Schema::table('org_projects', function (Blueprint $table) {
+            $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
             $table->string('slug')->nullable()->after('name');
             $table->timestamp('published_at')->nullable()->after('lock_version');
             $table->index(['user_id', 'updated_at']);
