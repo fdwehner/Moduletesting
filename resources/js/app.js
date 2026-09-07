@@ -28,7 +28,6 @@ function bootOrgDesignerApp() {
     initOrgDesigner(boot, component);
 }
 
-document.addEventListener('DOMContentLoaded', bootOrgDesignerApp);
 document.addEventListener('livewire:init', () => {
     queueMicrotask(bootOrgDesignerApp);
 });
@@ -37,5 +36,8 @@ document.addEventListener('livewire:navigated', () => {
     if (root) {
         delete root.dataset.booted;
     }
-    bootOrgDesignerApp();
+    queueMicrotask(bootOrgDesignerApp);
 });
+if (window.Livewire) {
+    queueMicrotask(bootOrgDesignerApp);
+}

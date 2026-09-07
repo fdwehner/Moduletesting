@@ -1255,17 +1255,20 @@ function updatePublishMenu() {
 function clearAll() {
   askConfirm(t("clear_all"), () => wire.resetProject());
 }
-$("btnSaveMenu").addEventListener("click", (e) => {
+$("btnSaveMenu").onclick = (e) => {
   e.preventDefault();
   e.stopPropagation();
   $("saveMenuContent").classList.toggle("open");
-});
-document.addEventListener("click", (e) => {
-  if (e.target.closest(".save-menu")) {
-    return;
-  }
-  $("saveMenuContent").classList.remove("open");
-});
+};
+if (!window.__orgDesignerMenuOutsideClick) {
+  window.__orgDesignerMenuOutsideClick = (e) => {
+    if (e.target.closest(".save-menu")) {
+      return;
+    }
+    document.getElementById("saveMenuContent")?.classList.remove("open");
+  };
+  document.addEventListener("click", window.__orgDesignerMenuOutsideClick);
+}
 $("saveMenuContent").addEventListener("click", (e) => {
   const btn = e.target.closest("button");
   if (!btn) return;
