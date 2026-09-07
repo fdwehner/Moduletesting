@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "style": {
+    "file": "assets/fonts-DhA1vfI8.css",
+    "familyStyles": {
+      "instrument-sans": "@font-face {\n  font-family: \"Instrument Sans\";\n  font-style: normal;\n  font-weight: 400;\n  font-display: swap;\n  src: url(\"/build/assets/instrument-sans-400-normal-DRC__1Mx.woff2\") format(\"woff2\");\n}\n\n@font-face {\n  font-family: \"Instrument Sans\";\n  font-style: normal;\n  font-weight: 500;\n  font-display: swap;\n  src: url(\"/build/assets/instrument-sans-500-normal-Dk9ku72i.woff2\") format(\"woff2\");\n}\n\n@font-face {\n  font-family: \"Instrument Sans\";\n  font-style: normal;\n  font-weight: 600;\n  font-display: swap;\n  src: url(\"/build/assets/instrument-sans-600-normal-B7fBEWYG.woff2\") format(\"woff2\");\n}\n\n.font-instrument-sans {\n  font-family: var(--font-instrument-sans);\n}"
+    },
+    "variables": {
+      "instrument-sans": "--font-instrument-sans: \"Instrument Sans\";"
+    }
+  },
+  "preloads": [
+    {
+      "alias": "instrument-sans",
+      "family": "Instrument Sans",
+      "weight": 400,
+      "style": "normal",
+      "file": "assets/instrument-sans-400-normal-DRC__1Mx.woff2",
+      "as": "font",
+      "type": "font/woff2",
+      "crossorigin": "anonymous"
+    },
+    {
+      "alias": "instrument-sans",
+      "family": "Instrument Sans",
+      "weight": 500,
+      "style": "normal",
+      "file": "assets/instrument-sans-500-normal-Dk9ku72i.woff2",
+      "as": "font",
+      "type": "font/woff2",
+      "crossorigin": "anonymous"
+    },
+    {
+      "alias": "instrument-sans",
+      "family": "Instrument Sans",
+      "weight": 600,
+      "style": "normal",
+      "file": "assets/instrument-sans-600-normal-B7fBEWYG.woff2",
+      "as": "font",
+      "type": "font/woff2",
+      "crossorigin": "anonymous"
+    }
+  ],
+  "families": {
+    "instrument-sans": {
+      "family": "Instrument Sans",
+      "variable": "--font-instrument-sans",
+      "variants": {
+        "400:normal": {
+          "files": [
+            {
+              "file": "assets/instrument-sans-400-normal-DRC__1Mx.woff2",
+              "format": "woff2"
+            }
+          ]
+        },
+        "500:normal": {
+          "files": [
+            {
+              "file": "assets/instrument-sans-500-normal-Dk9ku72i.woff2",
+              "format": "woff2"
+            }
+          ]
+        },
+        "600:normal": {
+          "files": [
+            {
+              "file": "assets/instrument-sans-600-normal-B7fBEWYG.woff2",
+              "format": "woff2"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

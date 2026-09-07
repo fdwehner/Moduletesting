@@ -29,12 +29,14 @@ The default database is SQLite (`DB_CONNECTION=sqlite`). Switch to MySQL by sett
 
 ## Laravel Cloud
 
-Set these in the environment **Deployments** settings. Commands must be non-interactive or Cloud will wait until the 10-minute deploy limit.
+`npm ci` / `npm run build` on Cloud is what blows the 10-minute limit. Compiled assets are committed in `public/build`, so Cloud must **not** run npm.
+
+In the environment **Deployments** settings, **replace** the build command (delete any `npm` lines):
 
 **Build commands**
 
 ```bash
-composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader && npm ci --no-audit --no-fund && npm run build && php artisan optimize --no-interaction
+composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader && php artisan config:cache --no-interaction && php artisan route:cache --no-interaction && php artisan view:cache --no-interaction
 ```
 
 **Deploy commands**
@@ -43,7 +45,9 @@ composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader &
 php artisan migrate --force --no-interaction
 ```
 
-Do not put `composer run dev`, `npm run dev`, or `php artisan serve` in build or deploy commands — those never exit.
+Do not use `composer run dev`, `npm ci`, `npm install`, `npm run build`, `npm run dev`, or `php artisan serve`. Those either never exit or download Node packages until Cloud cancels the deploy.
+
+After changing those settings, deploy `main` again.
 
 ## Development
 
