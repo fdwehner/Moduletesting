@@ -40,7 +40,7 @@
         </div>
         <button class="btn ghost" id="btnSettings" type="button" title="{{ __('org_designer.settings') }}">⚙</button>
         @foreach (config('app.available_locales') as $locale)
-            <form method="POST" action="{{ route('locale.update', ['locale' => $locale]) }}">
+            <form method="POST" action="{{ route('locale.update', ['locale' => $locale]) }}" data-flush-persist>
                 @csrf
                 <button
                     type="submit"

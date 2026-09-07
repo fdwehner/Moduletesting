@@ -280,13 +280,15 @@ function ensureBigPictureRows() {
 let history = [];
 let historyIndex = -1;
 let selectedCards = new Set();
-function snapshot() {
+function snapshot(save = true) {
   history = history.slice(0, historyIndex + 1);
   history.push(JSON.parse(JSON.stringify(state)));
   if (history.length > 50) history.shift();
   historyIndex = history.length - 1;
-  state.dirty = true;
-  persist();
+  if (save) {
+    state.dirty = true;
+    persist();
+  }
   updateUndoRedoButtons();
   updateSaveStatus();
 }
@@ -1207,11 +1209,15 @@ function clearAll() {
   askConfirm(t("clear_all"), () => wire.resetProject());
 }
 $("btnSaveMenu").addEventListener("click", (e) => {
+  e.preventDefault();
   e.stopPropagation();
   $("saveMenuContent").classList.toggle("open");
 });
 document.addEventListener("click", (e) => {
-  if (!e.target.closest(".save-menu")) $("saveMenuContent").classList.remove("open");
+  if (e.target.closest(".save-menu")) {
+    return;
+  }
+  $("saveMenuContent").classList.remove("open");
 });
 $("saveMenuContent").addEventListener("click", (e) => {
   const btn = e.target.closest("button");
@@ -1296,13 +1302,22 @@ document.addEventListener("keydown", (e) => {
   render();
   history = [];
   historyIndex = -1;
-  snapshot();
+  snapshot(false);
+
+  rootEl.querySelectorAll('form[data-flush-persist]').forEach((form) => {
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      flushPersist().finally(() => {
+        HTMLFormElement.prototype.submit.call(form);
+      });
+    });
+  });
 
   if (window.Livewire) {
     Livewire.on('org-designer-reloaded', (event) => {
       const payload = event.payload || event[0]?.payload || event;
       applyBoot(payload);
-      history = []; historyIndex = -1; snapshot();
+      history = []; historyIndex = -1; snapshot(false);
     });
     Livewire.on('org-designer-ask-import-mode', (event) => {
       const count = event.areaCount ?? event[0]?.areaCount ?? 0;
