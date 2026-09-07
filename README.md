@@ -27,6 +27,24 @@ Register or log in, then open `/org-designer` to manage **your org charts** (sto
 
 The default database is SQLite (`DB_CONNECTION=sqlite`). Switch to MySQL by setting `DB_*` in `.env`.
 
+## Laravel Cloud
+
+Set these in the environment **Deployments** settings. Commands must be non-interactive or Cloud will wait until the 10-minute deploy limit.
+
+**Build commands**
+
+```bash
+composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader && npm ci --no-audit --no-fund && npm run build && php artisan optimize --no-interaction
+```
+
+**Deploy commands**
+
+```bash
+php artisan migrate --force --no-interaction
+```
+
+Do not put `composer run dev`, `npm run dev`, or `php artisan serve` in build or deploy commands — those never exit.
+
 ## Development
 
 ```bash
