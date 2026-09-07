@@ -29,14 +29,14 @@ The default database is SQLite (`DB_CONNECTION=sqlite`). Switch to MySQL by sett
 
 ## Laravel Cloud
 
-`npm ci` / `npm run build` on Cloud is what blows the 10-minute limit. Compiled assets are committed in `public/build`, so Cloud must **not** run npm.
+The last hang (**waiting for instance to report ready**) means PHP started but the health check never got HTTP 200. That happens if `php artisan config:cache` ran at **build** time and froze the wrong database host, or if `/` queried MySQL before the app could answer.
 
-In the environment **Deployments** settings, **replace** the build command (delete any `npm` lines):
+In **Deployments**, use only:
 
 **Build commands**
 
 ```bash
-composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader && php artisan config:cache --no-interaction && php artisan route:cache --no-interaction && php artisan view:cache --no-interaction
+composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
 ```
 
 **Deploy commands**
@@ -45,9 +45,17 @@ composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader &
 php artisan migrate --force --no-interaction
 ```
 
-Do not use `composer run dev`, `npm ci`, `npm install`, `npm run build`, `npm run dev`, or `php artisan serve`. Those either never exit or download Node packages until Cloud cancels the deploy.
+Do **not** run `npm`, `config:cache`, `optimize`, `serve`, or `dev`.
 
-After changing those settings, deploy `main` again.
+Also check **Environment variables**:
+
+- `APP_KEY` must be set (`php artisan key:generate --show` locally, then paste)
+- `APP_URL` must be your `https://….laravel.cloud` URL
+- Database resource must be attached (Cloud injects `DB_*`)
+
+Health check path should be `/up` (Laravel’s built-in endpoint; it does not use the database).
+
+Cancel the stuck deploy, save those commands, deploy `main` again.
 
 ## Development
 

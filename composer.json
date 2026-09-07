@@ -43,10 +43,7 @@
             "npm run build"
         ],
         "cloud:build": [
-            "composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader",
-            "@php artisan config:cache --no-interaction",
-            "@php artisan route:cache --no-interaction",
-            "@php artisan view:cache --no-interaction"
+            "composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader"
         ],
         "cloud:deploy": [
             "@php artisan migrate --force --no-interaction"

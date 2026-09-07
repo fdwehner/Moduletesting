@@ -5,16 +5,25 @@ use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\OrgDesignerExportController;
 use App\Models\OrgProject;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schema;
 
 Route::get('/', function () {
-    $published = OrgProject::query()
-        ->published()
-        ->with('user:id,name')
-        ->latest('published_at')
-        ->limit(8)
-        ->get();
+    $publishedCharts = collect();
 
-    return view('welcome', ['publishedCharts' => $published]);
+    try {
+        if (Schema::hasTable('org_projects') && Schema::hasColumn('org_projects', 'published_at')) {
+            $publishedCharts = OrgProject::query()
+                ->published()
+                ->with('user:id,name')
+                ->latest('published_at')
+                ->limit(8)
+                ->get();
+        }
+    } catch (Throwable) {
+        $publishedCharts = collect();
+    }
+
+    return view('welcome', ['publishedCharts' => $publishedCharts]);
 })->name('home');
 
 Route::post('/locale/{locale}', [LocaleController::class, 'update'])

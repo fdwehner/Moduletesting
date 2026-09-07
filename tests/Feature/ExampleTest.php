@@ -16,4 +16,9 @@ class ExampleTest extends TestCase
         $response->assertOk();
         $response->assertSee(__('app.welcome.subtitle'), false);
     }
+
+    public function test_the_health_endpoint_is_up(): void
+    {
+        $this->get('/up')->assertOk();
+    }
 }
