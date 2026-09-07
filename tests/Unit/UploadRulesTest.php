@@ -22,4 +22,20 @@ class UploadRulesTest extends TestCase
             UploadRules::document()
         );
     }
+
+    public function test_excel_workbook_rules_are_centralized(): void
+    {
+        $this->assertSame(
+            ['required', 'file', 'extensions:xlsx,xlsm,xls', 'max:10240'],
+            UploadRules::excelWorkbook()
+        );
+    }
+
+    public function test_json_project_rules_are_centralized(): void
+    {
+        $this->assertSame(
+            ['required', 'file', 'extensions:json', 'max:10240'],
+            UploadRules::jsonProject()
+        );
+    }
 }

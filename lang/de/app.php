@@ -2,18 +2,18 @@
 
 return [
     'welcome' => [
-        'title' => 'Moduletesting',
-        'subtitle' => 'Laravel-Anwendungsscaffold, bereit für Ihren HTML-Prototyp.',
-        'contributing' => 'Melden Sie sich an oder registrieren Sie sich und hängen Sie anschließend die HTML-Datei an, damit sie in Livewire-Ansichten auf diesem Stack umgewandelt werden kann.',
+        'title' => 'Org Designer',
+        'subtitle' => 'Gestalten Sie ILT-Bereiche, Teams und Positionen aus Ihrer Baseline-Excel.',
+        'contributing' => 'Melden Sie sich an, um eine Baseline-Datei hochzuladen, Teams auf der Fläche anzuordnen und Ihr Org-Chart zu speichern.',
         'switch_language' => 'Sprache',
         'cta_login' => 'Anmelden',
         'cta_register' => 'Konto erstellen',
-        'cta_dashboard' => 'Dashboard öffnen',
+        'cta_dashboard' => 'Org Designer öffnen',
     ],
     'dashboard' => [
-        'nav' => 'Dashboard',
-        'title' => 'Dashboard',
+        'nav' => 'Org Designer',
+        'title' => 'Org Designer',
         'subtitle' => 'Sie sind angemeldet.',
-        'body' => 'Dieses Laravel- und Livewire-Scaffold entspricht Family. Senden Sie als Nächstes die HTML-Datei, damit die Anwendungsoberfläche hier daraus erstellt wird.',
+        'body' => 'Öffnen Sie den Org Designer, um Ihr GIT-Org-Chart zu erstellen.',
     ],
 ];

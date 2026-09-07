@@ -4,6 +4,8 @@ namespace App\Support;
 
 final class UploadRules
 {
+    public const MAX_KB_LARGE = 10240;
+
     /**
      * Shared image upload rules (JPEG, PNG, WebP; 5 MB).
      *
@@ -21,6 +23,36 @@ final class UploadRules
      */
     public static function document(): array
     {
-        return ['file', 'mimes:pdf,doc,docx,xls,xlsx,csv,txt', 'max:10240'];
+        return ['file', 'mimes:pdf,doc,docx,xls,xlsx,csv,txt', 'max:'.self::MAX_KB_LARGE];
+    }
+
+    /**
+     * Org designer Excel baseline import.
+     *
+     * @return list<string>
+     */
+    public static function excelWorkbook(): array
+    {
+        return ['required', 'file', 'extensions:xlsx,xlsm,xls', 'max:'.self::MAX_KB_LARGE];
+    }
+
+    public static function excelWorkbookRuleString(): string
+    {
+        return implode('|', self::excelWorkbook());
+    }
+
+    /**
+     * Org designer JSON project file.
+     *
+     * @return list<string>
+     */
+    public static function jsonProject(): array
+    {
+        return ['required', 'file', 'extensions:json', 'max:'.self::MAX_KB_LARGE];
+    }
+
+    public static function jsonProjectRuleString(): string
+    {
+        return implode('|', self::jsonProject());
     }
 }

@@ -21,14 +21,14 @@
     >
         <header class="border-b border-gray-200 bg-white dark:border-gray-600 dark:bg-secondary-500">
             <div class="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 px-6 py-4">
-                <a href="{{ auth()->check() ? route('dashboard') : route('home') }}" class="text-lg font-semibold">
+                <a href="{{ auth()->check() ? route('org-designer.index') : route('home') }}" class="text-lg font-semibold">
                     {{ config('app.name') }}
                 </a>
 
                 <nav class="flex flex-wrap items-center gap-2">
                     @auth
-                        <a href="{{ route('dashboard') }}" class="rounded-lg px-3 py-1.5 text-sm hover:bg-gray-50 dark:hover:bg-secondary-600">
-                            {{ __('app.dashboard.nav') }}
+                        <a href="{{ route('org-designer.index') }}" class="rounded-lg px-3 py-1.5 text-sm hover:bg-gray-50 dark:hover:bg-secondary-600">
+                            {{ __('org_designer.nav') }}
                         </a>
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf

@@ -1,8 +1,8 @@
 # Moduletesting
 
-Laravel 13 application scaffold, matching the [Family](https://github.com/fdwehner/Family) stack. Follow [CONTRIBUTING.md](CONTRIBUTING.md) for code style, translations, security, Livewire, and pull request rules.
+Laravel 13 application with the same stack as [Family](https://github.com/fdwehner/Family). Follow [CONTRIBUTING.md](CONTRIBUTING.md) for code style, translations, security, Livewire, and pull request rules.
 
-This repository is ready to turn an HTML prototype into a Laravel + Livewire app on the same conventions as Family.
+The product surface is **Org Designer** (from GIT org designer v2.0): ILT areas, team topologies, positions, Excel import/export, and a Big Picture view.
 
 ## Requirements
 
@@ -22,6 +22,8 @@ npm install
 npm run build
 php artisan serve
 ```
+
+Register or log in, then open `/org-designer`. Each account only sees its own org chart.
 
 The default database is SQLite (`DB_CONNECTION=sqlite`). Switch to MySQL by setting `DB_*` in `.env`.
 
@@ -49,4 +51,4 @@ php artisan test
 - **OpenAI timeouts** in `config/services.php` (`OPENAI_TIMEOUT`, `OPENAI_LONG_TIMEOUT`).
 - **Activity log channel** `activity` in `config/logging.php`.
 
-Consultant UI uses `layouts.app` (Livewire + Tailwind, dark mode). Keep any future client portal on a separate layout, views, and controllers as described in CONTRIBUTING.md.
+Consultant UI uses `layouts.app` (Livewire + Tailwind, dark mode). The org designer uses `layouts.org-designer`. Keep any future client portal on a separate layout, views, and controllers as described in CONTRIBUTING.md.

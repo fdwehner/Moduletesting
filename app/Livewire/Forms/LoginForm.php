@@ -56,7 +56,7 @@ class LoginForm extends Component
         RateLimiter::clear($this->throttleKey());
         session()->regenerate();
 
-        $this->redirect(route('dashboard'), navigate: true);
+        $this->redirect(route('org-designer.index'), navigate: true);
     }
 
     private function ensureIsNotRateLimited(): void

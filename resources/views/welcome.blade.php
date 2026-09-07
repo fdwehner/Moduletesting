@@ -10,7 +10,7 @@
         </div>
         <div class="flex flex-wrap items-center gap-2 shrink-0">
             @auth
-                <a href="{{ route('dashboard') }}" class="rounded-lg bg-secondary-500 px-4 py-2 text-white dark:bg-white dark:text-secondary-500">
+                <a href="{{ route('org-designer.index') }}" class="rounded-lg bg-secondary-500 px-4 py-2 text-white dark:bg-white dark:text-secondary-500">
                     {{ __('app.welcome.cta_dashboard') }}
                 </a>
             @else

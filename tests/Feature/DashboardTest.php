@@ -15,13 +15,12 @@ class DashboardTest extends TestCase
         $this->get(route('dashboard'))->assertRedirect(route('login'));
     }
 
-    public function test_authenticated_users_can_view_the_dashboard(): void
+    public function test_authenticated_users_are_sent_to_the_org_designer(): void
     {
         $user = User::factory()->create();
 
         $this->actingAs($user)
             ->get(route('dashboard'))
-            ->assertOk()
-            ->assertSee(__('app.dashboard.body'), false);
+            ->assertRedirect(route('org-designer.index'));
     }
 }

@@ -27,4 +27,43 @@ class TranslationParityTest extends TestCase
             $this->assertNotSame($key, __($key, locale: 'de'));
         }
     }
+
+    public function test_org_designer_keys_exist_in_both_locales(): void
+    {
+        foreach (['org_designer.title', 'org_designer.welcome_body', 'org_designer.validation.role_required', 'org_designer.js.need_area'] as $key) {
+            $this->assertNotSame($key, __($key, locale: 'en'));
+            $this->assertNotSame($key, __($key, locale: 'de'));
+        }
+    }
+
+    public function test_org_designer_english_and_german_key_trees_match(): void
+    {
+        $english = include lang_path('en/org_designer.php');
+        $german = include lang_path('de/org_designer.php');
+
+        $this->assertSame(
+            $this->translationKeys($english),
+            $this->translationKeys($german)
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $tree
+     * @return list<string>
+     */
+    private function translationKeys(array $tree, string $prefix = ''): array
+    {
+        $keys = [];
+        foreach ($tree as $key => $value) {
+            $full = $prefix === '' ? (string) $key : $prefix.'.'.$key;
+            $keys[] = $full;
+            if (is_array($value)) {
+                $keys = array_merge($keys, $this->translationKeys($value, $full));
+            }
+        }
+
+        sort($keys);
+
+        return $keys;
+    }
 }

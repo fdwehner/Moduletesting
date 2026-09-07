@@ -65,7 +65,7 @@ class RegisterForm extends Component
                 'email' => $user->email,
             ]);
 
-            $this->redirect(route('dashboard'), navigate: true);
+            $this->redirect(route('org-designer.index'), navigate: true);
         } catch (ValidationException $exception) {
             throw $exception;
         } catch (\Throwable $exception) {

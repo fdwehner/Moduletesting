@@ -28,7 +28,7 @@ class AuthenticationTest extends TestCase
             ->set('passwordConfirmation', 'password12')
             ->call('register')
             ->assertHasNoErrors()
-            ->assertRedirect(route('dashboard'));
+            ->assertRedirect(route('org-designer.index'));
 
         $this->assertAuthenticated();
         $this->assertDatabaseHas('users', ['email' => 'ada@example.com']);
@@ -46,7 +46,7 @@ class AuthenticationTest extends TestCase
             ->set('password', 'password12')
             ->call('login')
             ->assertHasNoErrors()
-            ->assertRedirect(route('dashboard'));
+            ->assertRedirect(route('org-designer.index'));
 
         $this->assertAuthenticatedAs($user);
     }
@@ -71,7 +71,7 @@ class AuthenticationTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $this->actingAs($user)->get(route('login'))->assertRedirect(route('dashboard'));
-        $this->actingAs($user)->get(route('home'))->assertRedirect(route('dashboard'));
+        $this->actingAs($user)->get(route('login'))->assertRedirect(route('org-designer.index'));
+        $this->actingAs($user)->get(route('home'))->assertRedirect(route('org-designer.index'));
     }
 }

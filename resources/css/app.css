@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import './org-designer.css';
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../vendor/livewire/livewire/src/**/*.php';
