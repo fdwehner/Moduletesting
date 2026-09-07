@@ -40,19 +40,4 @@ final class UploadRules
     {
         return implode('|', self::excelWorkbook());
     }
-
-    /**
-     * Org designer JSON project file.
-     *
-     * @return list<string>
-     */
-    public static function jsonProject(): array
-    {
-        return ['required', 'file', 'extensions:json', 'max:'.self::MAX_KB_LARGE];
-    }
-
-    public static function jsonProjectRuleString(): string
-    {
-        return implode('|', self::jsonProject());
-    }
 }

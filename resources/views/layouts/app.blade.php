@@ -28,7 +28,10 @@
                 <nav class="flex flex-wrap items-center gap-2">
                     @auth
                         <a href="{{ route('org-designer.index') }}" class="rounded-lg px-3 py-1.5 text-sm hover:bg-gray-50 dark:hover:bg-secondary-600">
-                            {{ __('org_designer.nav') }}
+                            {{ __('org_designer.charts.title') }}
+                        </a>
+                        <a href="{{ route('org-charts.public-index') }}" class="rounded-lg px-3 py-1.5 text-sm hover:bg-gray-50 dark:hover:bg-secondary-600">
+                            {{ __('org_designer.public.nav') }}
                         </a>
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
@@ -37,6 +40,9 @@
                             </button>
                         </form>
                     @else
+                        <a href="{{ route('org-charts.public-index') }}" class="rounded-lg px-3 py-1.5 text-sm hover:bg-gray-50 dark:hover:bg-secondary-600">
+                            {{ __('org_designer.public.nav') }}
+                        </a>
                         <a href="{{ route('login') }}" class="rounded-lg px-3 py-1.5 text-sm hover:bg-gray-50 dark:hover:bg-secondary-600">
                             {{ __('common.actions.login') }}
                         </a>
@@ -77,5 +83,6 @@
         </div>
 
         @livewireScripts
+        @livewire('modals.confirmation-modal')
     </body>
 </html>

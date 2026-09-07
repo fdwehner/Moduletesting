@@ -72,6 +72,6 @@ class AuthenticationTest extends TestCase
         $user = User::factory()->create();
 
         $this->actingAs($user)->get(route('login'))->assertRedirect(route('org-designer.index'));
-        $this->actingAs($user)->get(route('home'))->assertRedirect(route('org-designer.index'));
+        $this->actingAs($user)->get(route('home'))->assertOk();
     }
 }

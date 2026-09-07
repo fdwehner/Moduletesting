@@ -1,14 +1,21 @@
-<div id="org-designer-root" class="org-designer">
+<div id="org-designer-root" class="org-designer {{ $readOnly ? 'is-readonly' : '' }}">
     <script type="application/json" id="org-designer-boot">@json($this->bootPayload())</script>
 
     <header>
         <div class="brand">
             <div class="brand-title">{{ __('org_designer.title') }}</div>
+            <div class="chart-name" id="chartNameLabel">{{ $this->project->name }}</div>
         </div>
-        <label class="file-upload">
-            <span class="btn secondary">{{ __('org_designer.upload_excel') }}</span>
-            <input type="file" id="fileInput" wire:model="excelFile" accept=".xlsx,.xlsm,.xls" />
-        </label>
+        @unless ($readOnly)
+            <a class="btn ghost" href="{{ route('org-designer.index') }}">{{ __('org_designer.charts.back') }}</a>
+            <label class="file-upload">
+                <span class="btn secondary">{{ __('org_designer.upload_excel') }}</span>
+                <input type="file" id="fileInput" wire:model="excelFile" accept=".xlsx,.xlsm,.xls" />
+            </label>
+        @else
+            <a class="btn ghost" href="{{ route('org-charts.public-index') }}">{{ __('org_designer.public.nav') }}</a>
+            <span class="public-meta">{{ __('org_designer.public.by_author', ['name' => $this->project->user?->name ?? '']) }}</span>
+        @endunless
         <select id="iltSelect" title="{{ __('org_designer.switch_ilt') }}"></select>
         <button class="btn ghost" id="btnBigPicture" type="button">{{ __('org_designer.big_picture') }}</button>
         <button class="btn ghost" id="btnTeamView" type="button" style="display:none">{{ __('org_designer.back_to_teams') }}</button>
@@ -22,25 +29,40 @@
         <div class="save-status" id="saveStatus" title="{{ __('org_designer.saved') }}">
             <span class="dot"></span><span id="saveStatusText">{{ __('org_designer.saved') }}</span>
         </div>
-        <button class="btn ghost" id="btnUndo" type="button" title="{{ __('org_designer.undo') }}">↶</button>
-        <button class="btn ghost" id="btnRedo" type="button" title="{{ __('org_designer.redo') }}">↷</button>
-        <button class="btn secondary" id="btnAddTeam" type="button">{{ __('org_designer.add_team') }}</button>
-        <button class="btn secondary" id="btnEditHead" type="button">{{ __('org_designer.head') }}</button>
-        <div class="save-menu">
-            <button class="btn" id="btnSaveMenu" type="button">{{ __('org_designer.save_load') }}</button>
-            <div class="save-menu-content" id="saveMenuContent">
-                <button type="button" data-act="save-project">{{ __('org_designer.save_project') }}</button>
-                <button type="button" data-act="load-project">{{ __('org_designer.load_project') }}</button>
-                <div class="divider"></div>
-                <button type="button" data-act="export-excel">{{ __('org_designer.export_excel') }}</button>
-                <div class="divider"></div>
-                <button type="button" data-act="new-project" style="color:var(--hilti-red)">{{ __('org_designer.clear_everything') }}</button>
+        @unless ($readOnly)
+            <button class="btn ghost" id="btnUndo" type="button" title="{{ __('org_designer.undo') }}">↶</button>
+            <button class="btn ghost" id="btnRedo" type="button" title="{{ __('org_designer.redo') }}">↷</button>
+            <button class="btn secondary" id="btnAddTeam" type="button">{{ __('org_designer.add_team') }}</button>
+            <button class="btn secondary" id="btnEditHead" type="button">{{ __('org_designer.head') }}</button>
+            <div class="save-menu">
+                <button class="btn" id="btnSaveMenu" type="button">{{ __('org_designer.chart_menu') }}</button>
+                <div class="save-menu-content" id="saveMenuContent">
+                    <button type="button" data-act="rename-chart">{{ __('org_designer.charts.rename') }}</button>
+                    <button type="button" data-act="publish" @if($this->project->isPublished()) style="display:none" @endif>{{ __('org_designer.charts.publish') }}</button>
+                    <button type="button" data-act="unpublish" @if(! $this->project->isPublished()) style="display:none" @endif>{{ __('org_designer.charts.unpublish') }}</button>
+                    <button type="button" data-act="copy-link" @if(! $this->project->isPublished()) style="display:none" @endif>{{ __('org_designer.charts.copy_link') }}</button>
+                    <div class="divider"></div>
+                    <button type="button" data-act="export-excel">{{ __('org_designer.export_excel') }}</button>
+                    <div class="divider"></div>
+                    <button type="button" data-act="new-project" style="color:var(--hilti-red)">{{ __('org_designer.clear_everything') }}</button>
+                </div>
             </div>
-            <input type="file" class="hidden-input" id="projectFileInput" wire:model="projectFile" accept=".json,application/json" />
-        </div>
-        <button class="btn ghost" id="btnSettings" type="button" title="{{ __('org_designer.settings') }}">⚙</button>
+            <button class="btn ghost" id="btnSettings" type="button" title="{{ __('org_designer.settings') }}">⚙</button>
+        @else
+            <span class="btn ghost" id="publishedBadge">{{ __('org_designer.charts.status_published') }}</span>
+            <div hidden aria-hidden="true">
+                <input id="fileInput" type="file" />
+                <button id="btnUndo" type="button"></button>
+                <button id="btnRedo" type="button"></button>
+                <button id="btnAddTeam" type="button"></button>
+                <button id="btnEditHead" type="button"></button>
+                <button id="btnSaveMenu" type="button"></button>
+                <div id="saveMenuContent"></div>
+                <button id="btnSettings" type="button"></button>
+            </div>
+        @endunless
         @foreach (config('app.available_locales') as $locale)
-            <form method="POST" action="{{ route('locale.update', ['locale' => $locale]) }}" data-flush-persist>
+            <form method="POST" action="{{ route('locale.update', ['locale' => $locale]) }}" @unless($readOnly) data-flush-persist @endunless>
                 @csrf
                 <button
                     type="submit"
@@ -48,11 +70,16 @@
                 >{{ __('common.locales.'.$locale) }}</button>
             </form>
         @endforeach
-        <form method="POST" action="{{ route('logout') }}">
-            @csrf
-            <button type="submit" class="btn ghost">{{ __('common.actions.logout') }}</button>
-        </form>
+        @auth
+            <form method="POST" action="{{ route('logout') }}">
+                @csrf
+                <button type="submit" class="btn ghost">{{ __('common.actions.logout') }}</button>
+            </form>
+        @else
+            <a class="btn ghost" href="{{ route('login') }}">{{ __('common.actions.login') }}</a>
+        @endauth
     </header>
+
 
     <div id="bulkBar">
         <span><b id="bulkCount">0</b> {{ __('org_designer.selected', ['count' => '']) }}</span>
@@ -245,7 +272,7 @@
 
     <div class="modal-backdrop" id="promptModal">
         <div class="modal">
-            <h3 id="promptTitle" data-rename="{{ __('org_designer.rename.title') }}" data-new-area="{{ __('org_designer.rename.new_area_title') }}">{{ __('org_designer.rename.title') }}</h3>
+            <h3 id="promptTitle" data-rename="{{ __('org_designer.rename.title') }}" data-new-area="{{ __('org_designer.rename.new_area_title') }}" data-chart-name="{{ __('org_designer.charts.rename') }}">{{ __('org_designer.rename.title') }}</h3>
             <div class="field">
                 <input type="text" id="promptInput" placeholder="{{ __('org_designer.rename.placeholder') }}" />
             </div>

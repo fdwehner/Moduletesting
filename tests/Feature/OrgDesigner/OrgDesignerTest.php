@@ -2,12 +2,14 @@
 
 namespace Tests\Feature\OrgDesigner;
 
+use App\Livewire\OrgChartsIndex;
 use App\Livewire\OrgDesigner;
 use App\Models\OrgProject;
 use App\Models\User;
 use App\Services\OrgDesignerExcelService;
 use App\Support\OrgDesigner\OrgDesignerDocument;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Route;
 use Livewire\Livewire;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -17,52 +19,68 @@ class OrgDesignerTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_guests_cannot_view_the_org_designer(): void
+    public function test_guests_cannot_view_the_org_designer_index(): void
     {
         $this->get(route('org-designer.index'))->assertRedirect(route('login'));
     }
 
-    public function test_authenticated_users_can_view_the_org_designer(): void
+    public function test_authenticated_users_see_their_chart_list(): void
     {
         $user = User::factory()->create();
 
         $this->actingAs($user)
             ->get(route('org-designer.index'))
             ->assertOk()
-            ->assertSee(__('org_designer.title'), false)
-            ->assertSee(__('org_designer.welcome_body'), false);
+            ->assertSee(__('org_designer.charts.title'), false)
+            ->assertSee(__('org_designer.charts.empty'), false);
 
-        $this->assertDatabaseHas('org_projects', ['user_id' => $user->id]);
+        $this->assertDatabaseMissing('org_projects', ['user_id' => $user->id]);
+    }
+
+    public function test_users_can_create_multiple_charts_in_their_account(): void
+    {
+        $user = User::factory()->create();
+
+        Livewire::actingAs($user)
+            ->test(OrgChartsIndex::class)
+            ->call('createChart')
+            ->assertRedirect();
+
+        Livewire::actingAs($user)
+            ->test(OrgChartsIndex::class)
+            ->call('createChart')
+            ->assertRedirect();
+
+        $this->assertSame(2, OrgProject::query()->where('user_id', $user->id)->count());
     }
 
     public function test_users_persist_only_their_own_org_chart(): void
     {
         $owner = User::factory()->create();
         $other = User::factory()->create();
-
-        $state = $this->sampleState('HRIT');
+        $ownerChart = OrgProject::createForUser($owner, 'Owner chart');
+        $otherChart = OrgProject::createForUser($other, 'Other chart');
 
         Livewire::actingAs($owner)
-            ->test(OrgDesigner::class)
-            ->call('persist', $state, OrgDesignerDocument::defaultConfig(), 1)
+            ->test(OrgDesigner::class, ['orgProject' => $ownerChart])
+            ->call('persist', $this->sampleState('HRIT'), OrgDesignerDocument::defaultConfig(), 1)
             ->assertHasNoErrors();
 
-        $this->assertDatabaseHas('org_projects', ['user_id' => $owner->id]);
-        $ownerProject = OrgProject::query()->where('user_id', $owner->id)->first();
-        $this->assertSame('HRIT', $ownerProject?->state['currentILT'] ?? null);
+        $ownerChart->refresh();
+        $this->assertSame('HRIT', $ownerChart->state['currentILT'] ?? null);
 
-        Livewire::actingAs($other)
-            ->test(OrgDesigner::class)
-            ->assertSuccessful();
+        $this->actingAs($other)
+            ->get(route('org-designer.edit', $ownerChart))
+            ->assertForbidden();
 
-        $otherProject = OrgProject::query()->where('user_id', $other->id)->first();
-        $this->assertNotSame($ownerProject?->id, $otherProject?->id);
-        $this->assertSame([], $otherProject?->state['iltAreas'] ?? ['x']);
+        $otherChart->refresh();
+        $this->assertSame([], $otherChart->state['iltAreas'] ?? ['x']);
     }
 
     public function test_excel_import_creates_teams_and_positions(): void
     {
         $user = User::factory()->create();
+        $chart = OrgProject::createForUser($user, 'Baseline');
         $path = $this->writeBaselineSpreadsheet();
 
         $imported = app(OrgDesignerExcelService::class)->import(
@@ -72,20 +90,13 @@ class OrgDesignerTest extends TestCase
             'replace',
         );
 
-        $this->assertArrayHasKey('HRIT', $imported['state']['iltAreas']);
-        $this->assertSame('Platform Team', $imported['state']['iltAreas']['HRIT']['teams'][0]['name']);
-        $this->assertSame('Team Lead', $imported['state']['iltAreas']['HRIT']['teams'][0]['positions'][0]['role']);
-
         Livewire::actingAs($user)
-            ->test(OrgDesigner::class)
+            ->test(OrgDesigner::class, ['orgProject' => $chart])
             ->call('persist', $imported['state'], $imported['config'], 1)
             ->assertHasNoErrors();
 
-        $project = OrgProject::query()->where('user_id', $user->id)->first();
-        $this->assertNotNull($project);
-        $this->assertArrayHasKey('HRIT', $project->state['iltAreas'] ?? []);
-        $this->assertSame('Platform Team', $project->state['iltAreas']['HRIT']['teams'][0]['name'] ?? null);
-        $this->assertSame('Team Lead', $project->state['iltAreas']['HRIT']['teams'][0]['positions'][0]['role'] ?? null);
+        $chart->refresh();
+        $this->assertSame('Platform Team', $chart->state['iltAreas']['HRIT']['teams'][0]['name'] ?? null);
 
         @unlink($path);
     }
@@ -93,11 +104,11 @@ class OrgDesignerTest extends TestCase
     public function test_persist_rejects_a_stale_lock_version(): void
     {
         $user = User::factory()->create();
-        $project = OrgProject::firstOrCreateForUser($user);
+        $project = OrgProject::createForUser($user, 'Locked');
         $project->update(['lock_version' => 5]);
 
         Livewire::actingAs($user)
-            ->test(OrgDesigner::class)
+            ->test(OrgDesigner::class, ['orgProject' => $project])
             ->call('persist', $this->sampleState('HRIT'), OrgDesignerDocument::defaultConfig(), 1)
             ->assertHasNoErrors();
 
@@ -109,36 +120,116 @@ class OrgDesignerTest extends TestCase
     public function test_persist_strips_html_from_team_names(): void
     {
         $user = User::factory()->create();
+        $project = OrgProject::createForUser($user, 'Sanitize');
         $state = $this->sampleState('HRIT');
         $state['iltAreas']['HRIT']['teams'][0]['name'] = '<b>Platform</b>';
 
         Livewire::actingAs($user)
-            ->test(OrgDesigner::class)
+            ->test(OrgDesigner::class, ['orgProject' => $project])
             ->call('persist', $state, OrgDesignerDocument::defaultConfig(), 1)
             ->assertHasNoErrors();
 
-        $project = OrgProject::query()->where('user_id', $user->id)->first();
+        $project->refresh();
         $this->assertSame('Platform', $project->state['iltAreas']['HRIT']['teams'][0]['name'] ?? null);
     }
 
-    public function test_users_can_export_their_own_json_project(): void
+    public function test_json_export_route_is_removed(): void
     {
-        $user = User::factory()->create();
+        $this->assertFalse(Route::has('org-designer.export.json'));
+    }
 
-        $this->actingAs($user)
-            ->get(route('org-designer.export.json'))
-            ->assertOk();
+    public function test_index_lists_only_the_owners_charts(): void
+    {
+        $owner = User::factory()->create();
+        $other = User::factory()->create();
+        OrgProject::createForUser($owner, 'Mine only');
+        OrgProject::createForUser($other, 'Someone else');
+
+        $this->actingAs($owner)
+            ->get(route('org-designer.index'))
+            ->assertOk()
+            ->assertSee('Mine only', false)
+            ->assertDontSee('Someone else', false);
+    }
+
+    public function test_published_charts_appear_on_the_home_page(): void
+    {
+        $owner = User::factory()->create(['name' => 'Ada']);
+        $chart = OrgProject::createForUser($owner, 'Home GIT');
+        $chart->update(['published_at' => now()]);
+
+        $this->get(route('home'))
+            ->assertOk()
+            ->assertSee('Home GIT', false)
+            ->assertSee('Ada', false);
+    }
+
+    public function test_other_users_cannot_mount_the_editor(): void
+    {
+        $owner = User::factory()->create();
+        $intruder = User::factory()->create();
+        $chart = OrgProject::createForUser($owner, 'Private');
+
+        Livewire::actingAs($intruder)
+            ->test(OrgDesigner::class, ['orgProject' => $chart])
+            ->assertForbidden();
+    }
+
+    public function test_owner_can_publish_and_guests_can_view_the_public_chart(): void
+    {
+        $owner = User::factory()->create(['name' => 'Ada']);
+        $chart = OrgProject::createForUser($owner, 'Public GIT');
+
+        Livewire::actingAs($owner)
+            ->test(OrgDesigner::class, ['orgProject' => $chart])
+            ->call('publish')
+            ->assertHasNoErrors();
+
+        $chart->refresh();
+        $this->assertNotNull($chart->published_at);
+
+        $this->get(route('org-charts.show', $chart))
+            ->assertOk()
+            ->assertSee('Public GIT', false)
+            ->assertSee('Ada', false);
+
+        $this->get(route('org-charts.public-index'))
+            ->assertOk()
+            ->assertSee('Public GIT', false);
+    }
+
+    public function test_unpublished_charts_are_not_public(): void
+    {
+        $owner = User::factory()->create();
+        $chart = OrgProject::createForUser($owner, 'Secret');
+
+        $this->get(route('org-charts.show', $chart))->assertNotFound();
+        $this->get(route('org-charts.public-index'))->assertOk()->assertDontSee('Secret', false);
     }
 
     public function test_other_users_cannot_update_a_project_via_policy(): void
     {
         $owner = User::factory()->create();
         $intruder = User::factory()->create();
-        $project = OrgProject::firstOrCreateForUser($owner);
+        $project = OrgProject::createForUser($owner, 'Owned');
 
         $this->assertFalse($intruder->can('update', $project));
         $this->assertTrue($owner->can('update', $project));
-        $this->assertTrue($owner->can('export', $project));
+        $this->assertTrue($owner->can('publish', $project));
+        $this->assertFalse($intruder->can('view', $project));
+    }
+
+    public function test_users_can_delete_their_chart_from_the_index(): void
+    {
+        $user = User::factory()->create();
+        $chart = OrgProject::createForUser($user, 'Disposable');
+
+        Livewire::actingAs($user)
+            ->test(OrgChartsIndex::class)
+            ->call('deleteChart', $chart->id)
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseMissing('org_projects', ['id' => $chart->id]);
     }
 
     /**

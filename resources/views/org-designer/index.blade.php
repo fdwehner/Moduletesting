@@ -1,7 +1,7 @@
-@extends('layouts.org-designer')
+@extends('layouts.app')
 
-@section('title', __('org_designer.title'))
+@section('title', __('org_designer.charts.title'))
 
 @section('content')
-    <livewire:org-designer />
+    <livewire:org-charts-index />
 @endsection

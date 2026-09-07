@@ -49,8 +49,8 @@ class FormValidationService
             'org_designer_excel' => [
                 'excelFile' => UploadRules::excelWorkbook(),
             ],
-            'org_designer_json' => [
-                'projectFile' => UploadRules::jsonProject(),
+            'org_chart_name' => [
+                'name' => ['required', 'string', 'max:120'],
             ],
             default => throw new InvalidArgumentException('Unknown form: '.$form),
         };
@@ -79,6 +79,9 @@ class FormValidationService
             'org_designer_team' => [
                 'name.required' => __('org_designer.validation.team_name_required'),
                 'topology.in' => __('org_designer.validation.topology_invalid'),
+            ],
+            'org_chart_name' => [
+                'name.required' => __('org_designer.validation.chart_name_required'),
             ],
             default => [],
         };

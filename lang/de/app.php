@@ -4,7 +4,7 @@ return [
     'welcome' => [
         'title' => 'Org Designer',
         'subtitle' => 'Gestalten Sie ILT-Bereiche, Teams und Positionen aus Ihrer Baseline-Excel.',
-        'contributing' => 'Melden Sie sich an, um eine Baseline-Datei hochzuladen, Teams auf der Fläche anzuordnen und Ihr Org-Chart zu speichern.',
+        'contributing' => 'Melden Sie sich an, um Org-Charts in Ihrem Konto zu gestalten, oder sehen Sie unten veröffentlichte Charts.',
         'switch_language' => 'Sprache',
         'cta_login' => 'Anmelden',
         'cta_register' => 'Konto erstellen',

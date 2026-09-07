@@ -28,18 +28,19 @@ class OrgDesigner extends Component
 
     public mixed $excelFile = null;
 
-    public mixed $projectFile = null;
-
     public string $importMode = 'add';
 
-    public function mount(): void
-    {
-        $user = auth()->user();
-        abort_unless($user !== null, 403);
+    public string $chartName = '';
 
-        $this->project = OrgProject::firstOrCreateForUser($user);
-        $this->authorize('update', $this->project);
+    public bool $readOnly = false;
+
+    public function mount(OrgProject $orgProject): void
+    {
+        $this->authorize('update', $orgProject);
+        $this->project = $orgProject;
+        $this->chartName = $orgProject->name;
         $this->lockVersion = (int) $this->project->lock_version;
+        $this->readOnly = false;
     }
 
     public function updatedExcelFile(): void
@@ -54,13 +55,6 @@ class OrgDesigner extends Component
         }
         $this->importMode = 'replace';
         $this->importExcel();
-    }
-
-    public function updatedProjectFile(): void
-    {
-        $this->skipRender();
-        $this->authorize('import', $this->project);
-        $this->loadProjectJson();
     }
 
     /**
@@ -98,7 +92,52 @@ class OrgDesigner extends Component
             'conflict' => false,
             'lockVersion' => $this->lockVersion,
             'savedAt' => $this->project->state['savedAt'] ?? now()->toIso8601String(),
+            'published' => $this->project->isPublished(),
+            'publicUrl' => $this->project->isPublished() ? route('org-charts.show', $this->project) : null,
         ];
+    }
+
+    public function renameChart(string $name): void
+    {
+        $this->skipRender();
+        $this->authorize('update', $this->project);
+        $this->chartName = $name;
+        $validator = app(FormValidationService::class);
+        $this->validate(
+            $this->mapChartNameRules($validator->getValidationRules('org_chart_name')),
+            $this->mapChartNameRules($validator->getValidationMessages('org_chart_name')),
+        );
+        $this->project->refresh();
+        $this->project->name = trim($name);
+        $this->project->save();
+        $this->chartName = $this->project->name;
+        $this->logCrud('updated', $this->project, ['action' => 'rename']);
+        $this->toastSuccess(__('org_designer.charts.renamed'));
+        $this->dispatchDesignerReload();
+    }
+
+    public function publish(): void
+    {
+        $this->skipRender();
+        $this->authorize('publish', $this->project);
+        $this->project->refresh();
+        $this->project->published_at = now();
+        $this->project->save();
+        $this->logCrud('updated', $this->project, ['action' => 'publish']);
+        $this->toastSuccess(__('org_designer.charts.published'));
+        $this->dispatchDesignerReload();
+    }
+
+    public function unpublish(): void
+    {
+        $this->skipRender();
+        $this->authorize('publish', $this->project);
+        $this->project->refresh();
+        $this->project->published_at = null;
+        $this->project->save();
+        $this->logCrud('updated', $this->project, ['action' => 'unpublish']);
+        $this->toastSuccess(__('org_designer.charts.unpublished'));
+        $this->dispatchDesignerReload();
     }
 
     public function importExcel(): void
@@ -145,51 +184,10 @@ class OrgDesigner extends Component
         }
     }
 
-    public function loadProjectJson(): void
-    {
-        $this->skipRender();
-        $this->authorize('import', $this->project);
-
-        try {
-            $this->validate(
-                app(FormValidationService::class)->getValidationRules('org_designer_json')
-            );
-        } catch (ValidationException $exception) {
-            $this->toastError($exception->validator->errors()->first() ?: __('common.messages.error'));
-
-            return;
-        }
-
-        /** @var TemporaryUploadedFile $file */
-        $file = $this->projectFile;
-
-        try {
-            $payload = json_decode((string) $file->get(), true, 512, JSON_THROW_ON_ERROR);
-            if (! is_array($payload) || ! isset($payload['state']['iltAreas'])) {
-                throw new InvalidArgumentException(__('org_designer.import.invalid_project'));
-            }
-            $this->project->refresh();
-            $this->project->state = OrgDesignerDocument::sanitizeState(is_array($payload['state']) ? $payload['state'] : []);
-            $this->project->config = OrgDesignerDocument::sanitizeConfig(is_array($payload['CONFIG'] ?? $payload['config'] ?? null) ? ($payload['CONFIG'] ?? $payload['config']) : []);
-            $this->project->lock_version = (int) $this->project->lock_version + 1;
-            $this->project->save();
-            $this->lockVersion = (int) $this->project->lock_version;
-            $this->projectFile = null;
-            $this->logCrud('updated', $this->project, ['action' => 'json_import']);
-            $this->toastSuccess(__('org_designer.messages.project_loaded'));
-            $this->dispatchDesignerReload();
-        } catch (InvalidArgumentException $exception) {
-            $this->toastError($exception->getMessage());
-        } catch (\Throwable $exception) {
-            $this->logError('Org designer JSON import failed', ['error' => $exception->getMessage()]);
-            $this->toastError(__('org_designer.import.invalid_project'));
-        }
-    }
-
     public function resetProject(): void
     {
         $this->skipRender();
-        $this->authorize('delete', $this->project);
+        $this->authorize('update', $this->project);
         $this->project->refresh();
         $this->project->state = OrgDesignerDocument::defaultState();
         $this->project->config = OrgDesignerDocument::defaultConfig();
@@ -214,8 +212,12 @@ class OrgDesigner extends Component
             'state' => OrgDesignerDocument::encodeForClient($state),
             'config' => $config,
             'knownRoles' => OrgDesignerDocument::knownRoles(),
-            'exportExcelUrl' => route('org-designer.export.excel'),
-            'exportJsonUrl' => route('org-designer.export.json'),
+            'exportExcelUrl' => $this->readOnly ? null : route('org-designer.export.excel', $this->project),
+            'chartName' => $this->project->name,
+            'authorName' => $this->project->user?->name,
+            'published' => $this->project->isPublished(),
+            'publicUrl' => $this->project->isPublished() ? route('org-charts.show', $this->project) : null,
+            'readOnly' => $this->readOnly,
             'i18n' => trans('org_designer.js'),
         ];
     }
@@ -228,5 +230,19 @@ class OrgDesigner extends Component
     private function dispatchDesignerReload(): void
     {
         $this->dispatch('org-designer-reloaded', payload: $this->bootPayload());
+    }
+
+    /**
+     * @param  array<string, mixed>  $rules
+     * @return array<string, mixed>
+     */
+    private function mapChartNameRules(array $rules): array
+    {
+        $mapped = [];
+        foreach ($rules as $key => $value) {
+            $mapped[(string) preg_replace('/^name\b/', 'chartName', (string) $key)] = $value;
+        }
+
+        return $mapped;
     }
 }

@@ -28,6 +28,8 @@ export function initOrgDesigner(boot, wire) {
   }
   const t = tFactory(boot.i18n || {});
   const $ = (id) => document.getElementById(id);
+  const readOnly = !!boot.readOnly;
+  function canEdit() { return !readOnly; }
   let lockVersion = boot.lockVersion || 1;
   let persistTimer = null;
   let persistChain = Promise.resolve();
@@ -38,6 +40,9 @@ export function initOrgDesigner(boot, wire) {
   }
 
   function flushPersist() {
+    if (!canEdit()) {
+      return Promise.resolve();
+    }
     persistChain = persistChain.then(async () => {
       const result = await wire.persist(JSON.parse(JSON.stringify(state)), JSON.parse(JSON.stringify(CONFIG)), lockVersion);
       if (result?.conflict) {
@@ -65,11 +70,21 @@ export function initOrgDesigner(boot, wire) {
     if (payload.config) {
       Object.assign(CONFIG, payload.config);
     }
+    if (payload.chartName) {
+      boot.chartName = payload.chartName;
+    }
+    if ('published' in payload) {
+      boot.published = payload.published;
+    }
+    if ('publicUrl' in payload) {
+      boot.publicUrl = payload.publicUrl;
+    }
     ensureBigPictureRows();
     applyTopologyColors();
     populateILTSelect();
     render();
     updateSaveStatus();
+    updatePublishMenu();
   }
 
   let confirmYes = null;
@@ -88,12 +103,11 @@ export function initOrgDesigner(boot, wire) {
 
   let promptYes = null;
   function askPrompt(kind, value, onYes) {
-    $('promptTitle').textContent = kind === 'new-area' ? ($('promptTitle').dataset.newArea || $('promptTitle').textContent) : ($('promptTitle').dataset.rename || $('promptTitle').textContent);
-    if (kind === 'new-area') {
-      $('promptTitle').textContent = $('promptTitle').dataset.newArea;
-    } else {
-      $('promptTitle').textContent = $('promptTitle').dataset.rename;
-    }
+  $('promptTitle').textContent = kind === 'new-area'
+    ? ($('promptTitle').dataset.newArea || $('promptTitle').textContent)
+    : (kind === 'rename-chart'
+      ? ($('promptTitle').dataset.chartName || $('promptTitle').dataset.rename || $('promptTitle').textContent)
+      : ($('promptTitle').dataset.rename || $('promptTitle').textContent));
     $('promptInput').value = value || '';
     promptYes = onYes;
     $('promptModal').classList.add('open');
@@ -293,6 +307,7 @@ function snapshot(save = true) {
   updateSaveStatus();
 }
 function undo() {
+  if (!canEdit()) return;
   if (historyIndex > 0) {
     historyIndex--;
     state = JSON.parse(JSON.stringify(history[historyIndex]));
@@ -300,6 +315,7 @@ function undo() {
   }
 }
 function redo() {
+  if (!canEdit()) return;
   if (historyIndex < history.length - 1) {
     historyIndex++;
     state = JSON.parse(JSON.stringify(history[historyIndex]));
@@ -323,6 +339,9 @@ function updateSaveStatus() {
   el.classList.remove("dirty");
 }
 function persist() {
+  if (!canEdit()) {
+    return;
+  }
   state.savedAt = new Date().toISOString();
   state.dirty = false;
   schedulePersist();
@@ -524,21 +543,25 @@ function renderTeamCol(team) {
     row.appendChild(renderPCard(p, team.id));
     body.appendChild(row);
   });
-  const addBtn = document.createElement("button");
-  addBtn.className = "add-card-btn";
-  addBtn.textContent = t("add_position_full");
-  addBtn.addEventListener("click", () => openCardModal(team.id, null));
-  body.appendChild(addBtn);
+  if (canEdit()) {
+    const addBtn = document.createElement("button");
+    addBtn.className = "add-card-btn";
+    addBtn.textContent = t("add_position_full");
+    addBtn.addEventListener("click", () => openCardModal(team.id, null));
+    body.appendChild(addBtn);
+  }
   col.appendChild(head);
   col.appendChild(body);
-  new Sortable(body, {
-    group: "positions",
-    animation: 150,
-    draggable: ".position-row",
-    filter: ".add-card-btn, .lead-placeholder",
-    preventOnFilter: false,
-    onEnd: (evt) => { handleCardMove(evt); }
-  });
+  if (canEdit()) {
+    new Sortable(body, {
+      group: "positions",
+      animation: 150,
+      draggable: ".position-row",
+      filter: ".add-card-btn, .lead-placeholder",
+      preventOnFilter: false,
+      onEnd: (evt) => { handleCardMove(evt); }
+    });
+  }
   return col;
 }
 function render() {
@@ -580,22 +603,24 @@ function render() {
     $("iltHeadBox").style.display = "none";
   }
   area.teams.forEach(team => row.appendChild(renderTeamCol(team)));
-  const addCol = document.createElement("div");
-  addCol.className = "add-team-col";
-  addCol.textContent = t("add_team_col");
-  addCol.addEventListener("click", () => openTeamModal(null));
-  row.appendChild(addCol);
-  new Sortable(row, {
-    animation: 150,
-    handle: ".team-header",
-    draggable: ".team-col",
-    onEnd: (evt) => {
-      const area = currentArea();
-      const [moved] = area.teams.splice(evt.oldIndex, 1);
-      area.teams.splice(evt.newIndex, 0, moved);
-      snapshot();
-    }
-  });
+  if (canEdit()) {
+    const addCol = document.createElement("div");
+    addCol.className = "add-team-col";
+    addCol.textContent = t("add_team_col");
+    addCol.addEventListener("click", () => openTeamModal(null));
+    row.appendChild(addCol);
+    new Sortable(row, {
+      animation: 150,
+      handle: ".team-header",
+      draggable: ".team-col",
+      onEnd: (evt) => {
+        const area = currentArea();
+        const [moved] = area.teams.splice(evt.oldIndex, 1);
+        area.teams.splice(evt.newIndex, 0, moved);
+        snapshot();
+      }
+    });
+  }
   updateBulkBar();
   renderTwemoji($("teamView"));
 }
@@ -652,10 +677,10 @@ function renderBigPicture() {
   ensureBigPictureRows();
   const toolbar = document.createElement("div");
   toolbar.className = "bp-toolbar";
-  toolbar.innerHTML = `
-    <button class="btn secondary" id="bpAddRow">${escapeHtml(t("add_row"))}</button>
-    <span class="hint">${escapeHtml(t("bp_hint"))}</span>
-  `;
+  toolbar.innerHTML = canEdit()
+    ? `<button class="btn secondary" id="bpAddRow">${escapeHtml(t("add_row"))}</button>
+    <span class="hint">${escapeHtml(t("bp_hint"))}</span>`
+    : `<span class="hint">${escapeHtml(t("bp_hint"))}</span>`;
   bp.appendChild(toolbar);
   state.bigPictureRows.forEach((row, rowIdx) => {
     const rowEl = document.createElement("div");
@@ -695,46 +720,55 @@ function renderBigPicture() {
       <button data-act="row-down" ${rowIdx===state.bigPictureRows.length-1?"disabled":""} title="${escapeHtml(t("move_row_down"))}">▼</button>
       <button data-act="row-delete" title="${escapeHtml(t("delete_row"))}">×</button>
     `;
-    actions.querySelector('[data-act="row-up"]').onclick = () => moveRow(rowIdx, -1);
-    actions.querySelector('[data-act="row-down"]').onclick = () => moveRow(rowIdx, 1);
-    actions.querySelector('[data-act="row-delete"]').onclick = () => deleteBpRow(rowIdx);
-    rowEl.appendChild(actions);
+    if (canEdit()) {
+      actions.querySelector('[data-act="row-up"]').onclick = () => moveRow(rowIdx, -1);
+      actions.querySelector('[data-act="row-down"]').onclick = () => moveRow(rowIdx, 1);
+      actions.querySelector('[data-act="row-delete"]').onclick = () => deleteBpRow(rowIdx);
+      rowEl.appendChild(actions);
+    }
     bp.appendChild(rowEl);
-    new Sortable(inner, {
-      group: "bpAreas",
+    if (canEdit()) {
+      new Sortable(inner, {
+        group: "bpAreas",
+        animation: 150,
+        draggable: ".bp-area",
+        onEnd: () => {
+          state.bigPictureRows = Array.from(bp.querySelectorAll(".bp-row-inner")).map(el =>
+            Array.from(el.querySelectorAll(".bp-area")).map(a => a.dataset.iltName)
+          );
+          snapshot(); render();
+        }
+      });
+    }
+  });
+  if (canEdit()) {
+    const addRow = document.createElement("div");
+    addRow.className = "bp-add-row";
+    addRow.textContent = t("add_row");
+    addRow.onclick = () => {
+      state.bigPictureRows.push([]);
+      snapshot(); render();
+    };
+    bp.appendChild(addRow);
+    new Sortable(bp, {
       animation: 150,
-      draggable: ".bp-area",
+      draggable: ".bp-row",
+      handle: ".bp-row-drag-handle",
       onEnd: () => {
-        state.bigPictureRows = Array.from(bp.querySelectorAll(".bp-row-inner")).map(el =>
-          Array.from(el.querySelectorAll(".bp-area")).map(a => a.dataset.iltName)
+        state.bigPictureRows = Array.from(bp.querySelectorAll(".bp-row")).map(rowEl =>
+          Array.from(rowEl.querySelectorAll(".bp-area")).map(a => a.dataset.iltName)
         );
         snapshot(); render();
       }
     });
-  });
-  const addRow = document.createElement("div");
-  addRow.className = "bp-add-row";
-  addRow.textContent = t("add_row");
-  addRow.onclick = () => {
-    state.bigPictureRows.push([]);
-    snapshot(); render();
-  };
-  bp.appendChild(addRow);
-  new Sortable(bp, {
-    animation: 150,
-    draggable: ".bp-row",
-    handle: ".bp-row-drag-handle",
-    onEnd: () => {
-      state.bigPictureRows = Array.from(bp.querySelectorAll(".bp-row")).map(rowEl =>
-        Array.from(rowEl.querySelectorAll(".bp-area")).map(a => a.dataset.iltName)
-      );
+  }
+  const bpAddRow = $("bpAddRow");
+  if (bpAddRow && canEdit()) {
+    bpAddRow.onclick = () => {
+      state.bigPictureRows.push([]);
       snapshot(); render();
-    }
-  });
-  $("bpAddRow").onclick = () => {
-    state.bigPictureRows.push([]);
-    snapshot(); render();
-  };
+    };
+  }
 }
 function renderIltAreaTile(area) {
   const tile = document.createElement("div");
@@ -912,6 +946,7 @@ function handleCardMove(evt) {
 }
 let editingContext = { teamId: null, posId: null };
 function openCardModal(teamId, posId, defaults={}) {
+  if (!canEdit()) return;
   editingContext = { teamId, posId };
   const area = currentArea();
   const team = area.teams.find(t => t.id === teamId);
@@ -972,6 +1007,7 @@ function duplicatePosition(teamId, posId) {
 }
 let editingTeamId = null;
 function openTeamModal(teamId) {
+  if (!canEdit()) return;
   editingTeamId = teamId;
   const area = currentArea();
     if (!area) { toast(t("need_area")); return; }
@@ -1010,6 +1046,7 @@ $("teamSave").onclick = () => {
 };
 /* ===== Head of Area (fully editable) ===== */
 function openHeadModal() {
+  if (!canEdit()) return;
   const area = currentArea();
     if (!area) { toast(t("need_area")); return; }
   $("headRole").value = area.head?.role || "";
@@ -1046,6 +1083,7 @@ $("headSave").onclick = () => {
 };
 /* ===== Rename current ILT area by clicking the title ===== */
 function renameCurrentILT() {
+  if (!canEdit()) return;
   const old = state.currentILT;
   if (!old) { toast(t("need_area")); return; }
   askPrompt("rename", old, (input) => {
@@ -1197,13 +1235,22 @@ $("settingsSave").onclick = () => {
   snapshot(); render();
 };
 function exportExcel() {
+  if (!boot.exportExcelUrl) return;
   flushPersist().then(() => { window.location = boot.exportExcelUrl; });
 }
-function saveProject() {
-  flushPersist().then(() => { window.location = boot.exportJsonUrl; });
+function copyPublicLink() {
+  if (!boot.publicUrl) return;
+  navigator.clipboard.writeText(boot.publicUrl).then(() => toast(t("link_copied"))).catch(() => toast(t("link_copied")));
 }
-async function loadProjectFile(file) {
-  /* Livewire handles JSON upload */
+function updatePublishMenu() {
+  const publishBtn = $("saveMenuContent")?.querySelector('[data-act="publish"]');
+  const unpublishBtn = $("saveMenuContent")?.querySelector('[data-act="unpublish"]');
+  const copyBtn = $("saveMenuContent")?.querySelector('[data-act="copy-link"]');
+  if (publishBtn) publishBtn.style.display = boot.published ? "none" : "";
+  if (unpublishBtn) unpublishBtn.style.display = boot.published ? "" : "none";
+  if (copyBtn) copyBtn.style.display = boot.published ? "" : "none";
+  const nameEl = $("chartNameLabel");
+  if (nameEl && boot.chartName) nameEl.textContent = boot.chartName;
 }
 function clearAll() {
   askConfirm(t("clear_all"), () => wire.resetProject());
@@ -1224,14 +1271,15 @@ $("saveMenuContent").addEventListener("click", (e) => {
   if (!btn) return;
   $("saveMenuContent").classList.remove("open");
   const act = btn.dataset.act;
-  if (act === "save-project") saveProject();
-  else if (act === "load-project") {
-    if (Object.keys(state.iltAreas || {}).length) {
-      askConfirm(t("load_replace"), () => $("projectFileInput").click());
-    } else {
-      $("projectFileInput").click();
-    }
-  }
+  if (act === "rename-chart") {
+    askPrompt("rename-chart", boot.chartName || "", (name) => {
+      name = (name || "").trim();
+      if (!name) return;
+      wire.renameChart(name);
+    });
+  } else if (act === "publish") wire.publish();
+  else if (act === "unpublish") wire.unpublish();
+  else if (act === "copy-link") copyPublicLink();
   else if (act === "export-excel") exportExcel();
   else if (act === "new-project") clearAll();
 });
@@ -1279,7 +1327,7 @@ $("btnAddTeam").onclick = () => {
 document.addEventListener("keydown", (e) => {
   if ((e.ctrlKey||e.metaKey) && e.key === "z") { e.preventDefault(); undo(); }
   if ((e.ctrlKey||e.metaKey) && (e.key === "y" || (e.shiftKey && e.key === "Z"))) { e.preventDefault(); redo(); }
-  if ((e.ctrlKey||e.metaKey) && e.key === "s") { e.preventDefault(); saveProject(); }
+  if ((e.ctrlKey||e.metaKey) && e.key === "s") { e.preventDefault(); if (canEdit()) flushPersist(); }
   if (e.key === "Escape") clearSelection();
   if ((e.ctrlKey||e.metaKey) && e.key === "+") { e.preventDefault(); zoomStep(0.1); }
   if ((e.ctrlKey||e.metaKey) && e.key === "-") { e.preventDefault(); zoomStep(-0.1); }
@@ -1303,6 +1351,7 @@ document.addEventListener("keydown", (e) => {
   history = [];
   historyIndex = -1;
   snapshot(false);
+  updatePublishMenu();
 
   rootEl.querySelectorAll('form[data-flush-persist]').forEach((form) => {
     form.addEventListener('submit', (event) => {

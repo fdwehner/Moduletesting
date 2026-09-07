@@ -43,7 +43,8 @@
     overflow: visible;
     box-shadow: 0 1px 4px rgba(0,0,0,.08);
   }
-  .brand { display: flex; align-items: center; gap: 12px; margin-right: 12px; flex-shrink: 0; }
+  .chart-name { font-size: 13px; font-weight: 600; color: var(--text); }
+  .public-meta { font-size: 12px; color: #666; }
   .brand-title {
     font-size: 16px; color: var(--hilti-red);
     font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px;
@@ -512,4 +513,13 @@
 .dark #org-designer-root .modal .field select,
 .dark #org-designer-root .modal .field textarea {
   background: #162d4a; color: #f3f4f6; border-color: #4b5563;
+}
+#org-designer-root.is-readonly .card-actions,
+#org-designer-root.is-readonly .edit-hint,
+#org-designer-root.is-readonly .select-check,
+#org-designer-root.is-readonly #bulkBar,
+#org-designer-root.is-readonly .team-header-actions button,
+#org-designer-root.is-readonly .lead-placeholder,
+#org-designer-root.is-readonly .add-card-btn {
+  display: none !important;
 }

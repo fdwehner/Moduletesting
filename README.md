@@ -23,7 +23,7 @@ npm run build
 php artisan serve
 ```
 
-Register or log in, then open `/org-designer`. Each account only sees its own org chart.
+Register or log in, then open `/org-designer` to manage **your org charts** (stored in the database). Publish a finished chart so it appears at `/org-charts` for everyone.
 
 The default database is SQLite (`DB_CONNECTION=sqlite`). Switch to MySQL by setting `DB_*` in `.env`.
 

@@ -2,10 +2,13 @@
 
 namespace Tests\Feature;
 
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class LocaleSwitchTest extends TestCase
 {
+    use RefreshDatabase;
+
     public function test_locale_can_be_switched_to_german(): void
     {
         $this->from(route('home'))

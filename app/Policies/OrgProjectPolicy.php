@@ -12,9 +12,13 @@ class OrgProjectPolicy
         return $user->exists;
     }
 
-    public function view(User $user, OrgProject $project): bool
+    public function view(?User $user, OrgProject $project): bool
     {
-        return $this->owns($user, $project);
+        if ($project->isPublished()) {
+            return true;
+        }
+
+        return $user !== null && $this->owns($user, $project);
     }
 
     public function create(User $user): bool
@@ -34,12 +38,17 @@ class OrgProjectPolicy
 
     public function export(User $user, OrgProject $project): bool
     {
-        return $this->view($user, $project);
+        return $this->owns($user, $project);
     }
 
     public function import(User $user, OrgProject $project): bool
     {
         return $this->update($user, $project);
+    }
+
+    public function publish(User $user, OrgProject $project): bool
+    {
+        return $this->owns($user, $project);
     }
 
     private function owns(User $user, OrgProject $project): bool
