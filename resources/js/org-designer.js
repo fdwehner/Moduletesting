@@ -1308,6 +1308,11 @@ document.addEventListener("keydown", (e) => {
     form.addEventListener('submit', (event) => {
       event.preventDefault();
       flushPersist().finally(() => {
+        const tokenInput = form.querySelector('input[name="_token"]');
+        const latest = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        if (tokenInput && latest) {
+          tokenInput.value = latest;
+        }
         HTMLFormElement.prototype.submit.call(form);
       });
     });
